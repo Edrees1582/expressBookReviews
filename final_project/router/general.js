@@ -86,19 +86,27 @@ async function getAllBooks() {
   return response.data;
 }
 
+// Task 11: Get a book by ISBN using async-await with Axios
+async function getBookByISBN(isbn) {
+  const response = await axios.get(`${bookshopURL}/isbn/${encodeURIComponent(isbn)}`);
+  return response.data;
+}
+
 module.exports.general = public_users;
 module.exports.getAllBooks = getAllBooks;
+module.exports.getBookByISBN = getBookByISBN;
 
 // Run a task from the terminal while index.js is running
 if (require.main === module) {
   const [task, value] = process.argv.slice(2);
   const tasks = {
     books: () => getAllBooks(),
+    isbn: () => getBookByISBN(value),
   };
 
   if (!Object.prototype.hasOwnProperty.call(tasks, task) ||
       (task !== 'books' && !value)) {
-    console.error('Usage: node router/general.js books');
+    console.error('Usage: node router/general.js books | isbn "<value>"');
     process.exitCode = 1;
   } else {
     tasks[task]()
