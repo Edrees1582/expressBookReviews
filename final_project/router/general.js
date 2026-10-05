@@ -5,6 +5,7 @@ let isValid = require("./auth_users.js").isValid;
 let users = require("./auth_users.js").users;
 const public_users = express.Router();
 
+// Register a username and password for customer login
 public_users.post("/register", (req, res) => {
   const { username, password } = req.body || {};
 
@@ -40,6 +41,7 @@ public_users.get('/author/:author', function (req, res) {
   const author = req.params.author;
   const matchingBooks = {};
 
+  // Compare the URL's author with each book and preserve its ISBN in the result
   Object.keys(books).forEach((isbn) => {
     if (books[isbn].author === author) {
       matchingBooks[isbn] = books[isbn];
@@ -57,6 +59,7 @@ public_users.get('/title/:title', function (req, res) {
   const title = req.params.title;
   const matchingBooks = {};
 
+  // Collect all exact title matches, keyed by ISBN
   Object.keys(books).forEach((isbn) => {
     if (books[isbn].title === title) {
       matchingBooks[isbn] = books[isbn];
@@ -78,10 +81,12 @@ public_users.get('/review/:isbn', function (req, res) {
   return res.status(200).type('json').send(JSON.stringify(books[isbn].reviews, null, 4));
 });
 
+// Allow another API address while keeping local development simple
 const bookshopURL = process.env.BOOKSHOP_URL || 'http://localhost:5000';
+// Limit how long each Axios request can wait for the server
 const requestOptions = { timeout: 5000 };
 
-// Keep useful API errors and explain connection failures
+// All four Axios functions share this handler for HTTP, timeout, and network errors
 function handleBookRequestError(error) {
   if (error.response) {
     const message = error.response.data && error.response.data.message;
@@ -91,6 +96,7 @@ function handleBookRequestError(error) {
   } else if (error.request) {
     error.message = 'Unable to reach the book API. Check that the server is running';
   }
+  // Rethrow the original error so callers retain its HTTP response and error code
   throw error;
 }
 
@@ -99,6 +105,7 @@ function validateBookResponse(data, singleBook = false) {
   const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
   const isBook = (book) => isObject(book) && typeof book.author === 'string' &&
     typeof book.title === 'string' && isObject(book.reviews);
+  // ISBN lookup returns one book; list and search endpoints return books keyed by ISBN
   const valid = singleBook ? isBook(data) : isObject(data) && Object.values(data).every(isBook);
 
   if (!valid) {
@@ -108,24 +115,28 @@ function validateBookResponse(data, singleBook = false) {
 }
 
 // Task 10: Get all books using async-await with Axios
+// Return the complete book catalog keyed by ISBN
 async function getAllBooks() {
   const response = await axios.get(`${bookshopURL}/`, requestOptions).catch(handleBookRequestError);
   return validateBookResponse(response.data);
 }
 
 // Task 11: Get a book by ISBN using async-await with Axios
+// Encode the ISBN as a URL segment and validate a single book object
 async function getBookByISBN(isbn) {
   const response = await axios.get(`${bookshopURL}/isbn/${encodeURIComponent(isbn)}`, requestOptions).catch(handleBookRequestError);
   return validateBookResponse(response.data, true);
 }
 
 // Task 12: Get books by author using async-await with Axios
+// Encode spaces and accents; the author route above filters the matching books
 async function getBooksByAuthor(author) {
   const response = await axios.get(`${bookshopURL}/author/${encodeURIComponent(author)}`, requestOptions).catch(handleBookRequestError);
   return validateBookResponse(response.data);
 }
 
 // Task 13: Get books by title using async-await with Axios
+// Send the encoded title to the title route and validate the matching books
 async function getBooksByTitle(title) {
   const response = await axios.get(`${bookshopURL}/title/${encodeURIComponent(title)}`, requestOptions).catch(handleBookRequestError);
   return validateBookResponse(response.data);
