@@ -1,4 +1,5 @@
 const express = require('express');
+const axios = require('axios');
 let books = require("./booksdb.js");
 let isValid = require("./auth_users.js").isValid;
 let users = require("./auth_users.js").users;
@@ -77,4 +78,34 @@ public_users.get('/review/:isbn', function (req, res) {
   return res.status(200).type('json').send(JSON.stringify(books[isbn].reviews, null, 4));
 });
 
+const bookshopURL = process.env.BOOKSHOP_URL || 'http://localhost:5000';
+
+// Task 10: Get all books using async-await with Axios
+async function getAllBooks() {
+  const response = await axios.get(`${bookshopURL}/`);
+  return response.data;
+}
+
 module.exports.general = public_users;
+module.exports.getAllBooks = getAllBooks;
+
+// Run a task from the terminal while index.js is running
+if (require.main === module) {
+  const [task, value] = process.argv.slice(2);
+  const tasks = {
+    books: () => getAllBooks(),
+  };
+
+  if (!Object.prototype.hasOwnProperty.call(tasks, task) ||
+      (task !== 'books' && !value)) {
+    console.error('Usage: node router/general.js books');
+    process.exitCode = 1;
+  } else {
+    tasks[task]()
+      .then((data) => console.log(JSON.stringify(data, null, 4)))
+      .catch((error) => {
+        console.error(JSON.stringify(error.response ? error.response.data : { message: error.message }, null, 4));
+        process.exitCode = 1;
+      });
+  }
+}
